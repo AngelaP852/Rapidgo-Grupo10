@@ -98,7 +98,7 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 - Contrato del evento: [`docs/contrato_evento.md`](docs/contrato_evento.md)
 - Indicadores y alertas: [`docs/kpis_y_alertas.md`](docs/kpis_y_alertas.md)
 - Registros de decisiones (ADR): `docs/decisions/` (pendiente)
-- Puntos de control semanales: Semana 1 (pendiente)
+
 
 ## Contribuciones (Semana 1)
 
@@ -107,6 +107,5 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 | Ana Karina Arenales Bautista | Contrato JSON y ejemplos, KPIs y alertas, README inicial |
 | Angela Maria Palacios Alonso | Creación del repositorio, particiones y topic, revisiones |
 | Daniela Gomez Castro | Tablero Kanban |
-
-Se actualizará cada semana. Enlace al video final: pendiente (Semana 4).
+.
 Se actualizará cada semana. Enlace al video final: pendiente (Semana 4).
