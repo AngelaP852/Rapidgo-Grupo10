@@ -107,5 +107,6 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 | Ana Karina Arenales Bautista | Contrato JSON y ejemplos, KPIs y alertas, README inicial |
 | Angela Maria Palacios Alonso | Creación del repositorio, particiones y topic, revisiones |
 | Daniela Gomez Castro | Tablero Kanban |
-.
+
+
 Se actualizará cada semana. Enlace al video final: pendiente (Semana 4).
