@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kanban RapidGo · Variante 1 SLA</title>
+<style>
+:root{--bg:#f6f7f5;--sf:#fff;--tx:#1d2733;--mu:#6b7785;--bd:#dde2e6;--g:#006837;--a:#1f4e79;--t:#0f9d8f;--o:#f5a623;--r:#e84c61;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181c;--sf:#1e252b;--tx:#e8edf1;--mu:#9aa6b2;--bd:#303a43}}
+:root[data-theme="dark"]{--bg:#14181c;--sf:#1e252b;--tx:#e8edf1;--mu:#9aa6b2;--bd:#303a43}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 16px 4px}h1{font-size:18px;margin:0}p.s{margin:2px 0 10px;color:var(--mu);font-size:12px}
+.f{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px;align-items:center}
+.f button{border:1px solid var(--bd);background:var(--sf);color:var(--tx);border-radius:16px;padding:4px 11px;font-size:12px;cursor:pointer}
+.f button.on{background:var(--g);color:#fff;border-color:var(--g)}.f b{font-size:11px;color:var(--mu);margin-left:6px}
+.bar{height:6px;margin:0 16px 12px;background:var(--bd);border-radius:3px;overflow:hidden}.bar i{display:block;height:100%;background:var(--g);width:0;transition:width .3s}
+.board{display:flex;gap:10px;padding:0 16px 16px;overflow-x:auto;align-items:flex-start}
+.col{flex:0 0 250px;background:var(--sf);border:1px solid var(--bd);border-radius:10px;min-height:120px}
+.col h2{margin:0;padding:8px 10px;font-size:12px;letter-spacing:.04em;color:#fff;border-radius:9px 9px 0 0;display:flex;justify-content:space-between}
+.cards{padding:8px;display:flex;flex-direction:column;gap:8px;min-height:60px}.col.over{outline:2px dashed var(--g)}
+.c{background:var(--bg);border:1px solid var(--bd);border-left:4px solid var(--g);border-radius:8px;padding:8px;cursor:grab}
+.c.w2{border-left-color:var(--a)}.c.w3{border-left-color:var(--t)}.c.w4{border-left-color:var(--r)}
+.c .n{font-weight:600;font-size:13px}.c .d{color:var(--mu);font-size:12px;margin-top:3px}
+.m{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.m span{font-size:10px;border:1px solid var(--bd);border-radius:10px;padding:1px 7px;color:var(--mu)}
+.m .Alta{color:var(--r);border-color:var(--r)}.m .ow{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+.c select{margin-top:6px;width:100%;font-size:11px;background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:2px}
+footer{padding:0 16px 16px;color:var(--mu);font-size:12px}button.rs{margin-left:auto}
+</style></head><body>
+<header><h1>RapidGo · Variante 1 · SLA de entregas</h1>
+<p class="s">Kanban del proyecto final · A = Kafka/Producer → Airflow → Integración · B = Spark/Data Lake → Tests/CI → Release · C = Tests/CI → Integración → Calidad/README</p></header>
+<div class="f" id="fw"></div><div class="f" id="fo"></div>
+<div class="bar"><i id="pb"></i></div>
+<div class="board" id="bd"></div>
+<footer>Arrastra las tarjetas o usa el selector de cada una. Recuerda: 1 PR sustancial por integrante en las semanas 2, 3 y 4, con review cruzado y Action visible. Al pasar esto a GitHub Projects, cada tarjeta debe ser un Issue.</footer>
+<script>
+var COLS=[["BACKLOG","#6b7785"],["READY","#1f4e79"],["IN PROGRESS","#f5a623"],["REVIEW","#0f9d8f"],["DONE","#006837"]];
+// [semana, responsable, prioridad, componente, titulo, descripcion]
+var T=[
+[1,"C","Alta","Repo","Crear repo público y estructura","Carpetas producer/ spark/ airflow/ tests/ samples/ datalake/ docs/ + 3 colaboradores"],
+[1,"C","Alta","Gestión","Montar Kanban y campos","Columnas + Semana, Responsable, Prioridad, Componente; ≥12 Issues"],
+[1,"A","Alta","Kafka","Contrato JSON del evento SLA","order_id, zone, event_type, event_ts, distance_km, status + samples/evento.json"],
+[1,"A","Alta","Kafka","Topic, key y particiones + ADR-001","Topic de eventos de entrega, key = order_id (orden por pedido); justificar nº de particiones"],
+[1,"B","Media","Docs","Diagrama de arquitectura","docs/arquitectura.png: Producer → Kafka → Spark → Data Lake → Airflow"],
+[1,"B","Alta","Spark","Definir 3 KPIs y 2 alertas","KPIs: tiempo promedio, % fuera de SLA, pedidos retrasados. Alertas: SLA excedido, entrega detenida"],
+[1,"C","Media","Docs","README inicial + docker-compose preliminar","Problema, equipo, variante, arquitectura"],
+[1,"C","Alta","Docs","Checkpoint semana1.md","Máx. 1 página: decisión clave, riesgo principal, plan semana 2"],
+[1,"T","Alta","Release","Release v0.1.0-foundation","Gate S1: repo, colaboradores, Kanban, contrato, KPIs, ADR-001"],
+[2,"A","Alta","Producer","Producer funcional de eventos SLA","Genera pedidos con retrasos simulados, identificables por equipo"],
+[2,"A","Alta","Kafka","Kafka con varias particiones y key","Verificar distribución y offsets; guardar valores reales para el checkpoint"],
+[2,"B","Alta","Spark","Streaming: parseo + 3 transformaciones","Parsear JSON, calcular duración de entrega, marcar fuera de SLA"],
+[2,"B","Alta","Spark","Agregación por ventana + 2 alertas","Ventana de tiempo por zona; reglas SLA excedido / entrega detenida"],
+[2,"B","Alta","Data Lake","Parquet + checkpoint (raw/processed/curated)","Persistir salida y probar reinicio desde checkpoint"],
+[2,"C","Alta","Tests","Tests con pytest","Contrato del evento + reglas de alerta"],
+[2,"C","Alta","CI","ci.yml (GitHub Actions)","compileall, pytest, docker compose config; push, pull_request, workflow_dispatch"],
+[2,"T","Alta","Release","ADR-002 + semana2.md + release v0.2.0","Valor real, decisión técnica, problema real con enlace al PR"],
+[3,"A","Alta","Airflow","DAG de 5 tasks","check_fuentes → validar_raw → agregar → validar_curated → reporte"],
+[3,"A","Media","Airflow","Retries y XCom","Pasar conteos o rutas entre tasks"],
+[3,"B","Alta","Calidad","Fallo controlado y recuperación","Kafka detenido o raw vacío; guardar log real y cambio que lo resolvió"],
+[3,"B","Alta","CI","CI ampliado","Importar/validar DAG + pruebas de reglas de negocio"],
+[3,"C","Alta","Integración","Integrar DAG con el pipeline + ADR-003","Estrategia de orquestación o recuperación"],
+[3,"C","Media","Docs","Checkpoint semana3.md","Tarea que falló, log, tareas afectadas, cambio que lo resolvió"],
+[3,"T","Alta","Release","Release v0.3.0-orchestration","Gate S3: DAG ejecutado, fallo y recuperación, CI verde"],
+[4,"A","Alta","Integración","Integrar y estabilizar pipeline completo","Ejecutar end-to-end desde cero con Docker"],
+[4,"B","Alta","Release","Quality gate y tag v1.0.0","CI verde antes del tag; GitHub Release con notas"],
+[4,"C","Alta","Docs","README final + tabla de contribuciones","Instalación, ejecución, resultados, limitaciones, responsables"],
+[4,"T","Alta","CI","workflow_dispatch por integrante","Cada uno ejecuta el workflow final al menos una vez"],
+[4,"T","Alta","Release","Video ≤ 10 min y cierre de Issues","Los 3 hablan; enlazar el video en README o release"]];
+var K="rapidgo-kanban-v1",st={},fw=0,fo="";
+try{st=JSON.parse(localStorage.getItem(K)||"{}")}catch(e){st={}}
+function col(i){return st[i]!==undefined?st[i]:(T[i][0]===1?1:0)}
+function save(){try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}}
+function mv(i,c){st[i]=c;save();draw()}
+function btn(p,l,on,fn){var b=document.createElement("button");b.textContent=l;if(on)b.className="on";b.onclick=fn;p.appendChild(b)}
+function draw(){
+ var a=document.getElementById("fw");a.innerHTML="";btn(a,"Todas",!fw,function(){fw=0;draw()});
+ for(var w=1;w<=4;w++)(function(w){btn(a,"Semana "+w,fw===w,function(){fw=w;draw()})})(w);
+ var o=document.getElementById("fo");o.innerHTML="";
+ [["","Todos"],["A","A"],["B","B"],["C","C"],["T","Equipo"]].forEach(function(x){btn(o,x[1],fo===x[0],function(){fo=x[0];draw()})});
+ var b=document.createElement("b");var d=0;T.forEach(function(t,i){if(col(i)===4)d++});b.textContent=d+"/"+T.length+" hechas";o.appendChild(b);
+ var rs=document.createElement("button");rs.className="rs";rs.textContent="Reiniciar";rs.onclick=function(){st={};save();draw()};o.appendChild(rs);
+ document.getElementById("pb").style.width=(d/T.length*100)+"%";
+ var B=document.getElementById("bd");B.innerHTML="";
+ COLS.forEach(function(C,ci){
+  var el=document.createElement("div");el.className="col";var n=0,h="";
+  T.forEach(function(t,i){if(col(i)!==ci||(fw&&t[0]!==fw)||(fo&&t[1]!==fo))return;n++;
+   h+='<div class="c w'+t[0]+'" draggable="true" data-i="'+i+'"><div class="n">'+t[4]+'</div><div class="d">'+t[5]+'</div><div class="m"><span class="ow">'+(t[1]==="T"?"Equipo":t[1])+'</span><span>S'+t[0]+'</span><span class="'+t[2]+'">'+t[2]+'</span><span>'+t[3]+'</span></div><select data-i="'+i+'">'+COLS.map(function(c,k){return'<option value="'+k+'"'+(k===ci?" selected":"")+'>'+c[0]+'</option>'}).join("")+'</select></div>'});
+  el.innerHTML='<h2 style="background:'+C[1]+'"><span>'+C[0]+'</span><span>'+n+'</span></h2><div class="cards">'+h+'</div>';
+  el.ondragover=function(e){e.preventDefault();el.classList.add("over")};
+  el.ondragleave=function(){el.classList.remove("over")};
+  el.ondrop=function(e){e.preventDefault();var i=e.dataTransfer.getData("text/plain");if(i!=="")mv(+i,ci)};
+  B.appendChild(el)});
+ B.querySelectorAll(".c").forEach(function(c){c.ondragstart=function(e){e.dataTransfer.setData("text/plain",c.dataset.i)}});
+ B.querySelectorAll("select").forEach(function(s){s.onchange=function(){mv(+s.dataset.i,+s.value)}});
+}
+draw();
+</script></body></html>
