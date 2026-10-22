@@ -1,0 +1,11 @@
+{
+  "event_id": "EVT-000001",
+  "team_id": "equipo-v1",
+  "order_id": "ORD-000123",
+  "status": "EN_RUTA",
+  "zone": "Centro",
+  "distance_km": 3.2,
+  "created_at": "2026-10-21T14:00:00Z",
+  "promised_at": "2026-10-21T14:35:00Z",
+  "event_ts": "2026-10-21T14:20:00Z"
+}
