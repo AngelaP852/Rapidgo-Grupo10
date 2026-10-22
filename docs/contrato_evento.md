@@ -34,4 +34,4 @@ Estados especiales: DETENIDO (entrega parada), CANCELADO.
 
 ## Ejemplos
 
-Ver `samples/evento_pedido.json` y `samples/eventos_ciclo_vida.jsonl`.
+Ver `samples/eventos_pedido.json` y `samples/eventos_ciclo_vida.jsonl`.
