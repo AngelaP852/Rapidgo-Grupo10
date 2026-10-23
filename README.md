@@ -57,7 +57,7 @@ Estados: `CREADO → ASIGNADO → RECOGIDO → EN_RUTA → ENTREGADO`, más `DET
 |---|---|---|---|---|
 | `rapidgo.sla.pedidos` | `order_id` | 3 | 1 | 7 días |
 
-Valores propuestos; la justificación y la decisión final irán en el ADR-001 (pendiente).
+Valores propuestos; la justificación y la decisión final están en el [ADR-001](https://github.com/AngelaP852/Rapidgo-Grupo10/tree/main/docs/decisions).
 
 ## Indicadores y alertas (umbrales iniciales)
 
@@ -97,7 +97,7 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 
 - Contrato del evento: [`docs/contrato_evento.md`](docs/contrato_evento.md)
 - Indicadores y alertas: [`docs/kpis_y_alertas.md`](docs/kpis_y_alertas.md)
-- Registros de decisiones (ADR): `docs/decisions/` (pendiente)
+- Registros de decisiones (ADR): [`docs/decisions/`](docs/decisions/)
 
 
 ## Contribuciones (Semana 1)
