@@ -21,31 +21,31 @@ Un pedido **cumple el SLA** si `event_ts[ENTREGADO] <= promised_at`.
 |---|---|---|---|
 | Tiempo promedio de entrega | promedio(`event_ts[ENTREGADO] − created_at`) | 5 min (tumbling) | zona |
 | % fuera de SLA | pedidos con `event_ts[ENTREGADO] > promised_at` ÷ pedidos entregados × 100 | 5 min (tumbling) | zona |
-| Pedidos retrasados | conteo de pedidos sin `ENTREGADO`/`CANCELADO` con `ahora > promised_at` | estado actual | zona |
+| Pedidos retrasados | conteo de pedidos sin `ENTREGADO`/`CANCELADO` con `ahora > promised_at` | estado actual| zona |
 
-Ejemplo con los samples: ORD-000123 tarda 41 min (6 min tarde) y
-ORD-000124 tarda 21 min (cumple). Resultado: promedio 31 min,
+Ejemplo con los samples: ORD-000123 tarda 41 min (6 min tarde) y ORD-000124 tarda 21 min (cumple). 
+Resultado: promedio 31 min,
 50 % fuera de SLA.
 
-Las ventanas usan el tiempo del evento (`event_ts`) con watermark
-de 10 minutos.
+Las ventanas usan el tiempo del evento (`event_ts`) con watermark de 10 minutos.
+**`ahora`:** es el mayor `event_ts` visto en el stream (tiempo del evento), no el reloj del sistema, así los resultados no cambian si el producer se ejecuta más rápido que el tiempo real.
 
 ## 3. Reglas de alerta
 
 | Regla | Condición | Umbral inicial | Severidad |
 |---|---|---|---|
 | SLA excedido | pedido sin `ENTREGADO`/`CANCELADO` y `ahora > promised_at + tolerancia` | tolerancia = 5 min | Alta |
-| Entrega detenida | pedido en `EN_RUTA` o `DETENIDO` sin eventos nuevos | 10 min | Media |
+| Entrega detenida (`ENTREGA_DETENIDA`) | pedido en `EN_RUTA` o `DETENIDO` sin eventos nuevos | 10 min | Media|
 
+La tolerancia de 5 min solo aplica a la alerta, para no avisar por retrasos mínimos. El KPI "% fuera de SLA" cuenta cualquier retraso, sin tolerancia.
 La regla de entrega detenida requiere que el producer emita un evento
-`EN_RUTA` cada 5 minutos (latido) mientras el pedido está en ruta.
-Por tanto, 10 min equivalen a 2 latidos perdidos.
+`EN_RUTA` cada 5 minutos (latido) mientras el pedido está en ruta.Por tanto, 10 min equivalen a 2 latidos perdidos. Cuando un pedido pasa a `DETENIDO` el producer deja de emitir latidos, así que la alerta se dispara 10 min después de su último evento (ver `samples/eventos_entrega_detenida.jsonl`).
 
 ## 4. Justificación de umbrales
 
 | Umbral | Origen | Si es muy bajo | Si es muy alto |
 |---|---|---|---|
-| 10 min base + 8 min/km | Ajustado a los pedidos de ejemplo | SLA imposible de cumplir | SLA poco exigente |
+| 10 min base + 8 min/km | Supuesto inicial del equipo; se validará con datos del producer | SLA imposible de cumplir | SLA poco exigente |
 | Tolerancia 5 min | Evita alertar por retrasos mínimos | Falsas alarmas | Detección tardía |
 | Detenida 10 min | 2 latidos perdidos (latido cada 5 min) | Falsas alarmas | Pedido parado sin detectar |
 | Ventana 5 min | Balance entre actualización y estabilidad | Datos ruidosos | Reacción lenta |
