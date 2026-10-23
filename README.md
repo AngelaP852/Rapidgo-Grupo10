@@ -97,7 +97,7 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 
 - Contrato del evento: [`docs/contrato_evento.md`](docs/contrato_evento.md)
 - Indicadores y alertas: [`docs/kpis_y_alertas.md`](docs/kpis_y_alertas.md)
-- Registros de decisiones (ADR): `docs/decisions/` (pendiente)
+- Registros de decisiones (ADR): https://github.com/AngelaP852/Rapidgo-Grupo10/tree/main/docs/decisions
 
 
 ## Contribuciones (Semana 1)
