@@ -10,7 +10,7 @@ Docente: Ing. Oscar Jobany Gomez Ochoa
 | **Integrantes** | Daniela Gomez Castro · Angela Maria Palacios Alonso · Ana Karina Arenales Bautista |
 | **Variante** | 1 — SLA de entregas |
 | **Versión actual** | En preparación (v0.1.0-foundation, Semana 1 · diseño y organización) |
-| **Tablero Kanban** | [enlace al GitHub Project del equipo] |
+| **Tablero Kanban** | https://github.com/users/AngelaP852/projects/4/views/1 |
 
 ## Problema de negocio
 
