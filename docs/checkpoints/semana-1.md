@@ -1,7 +1,7 @@
 # Checkpoint Semana 1
 
 ## Decisión más importante
-Publicar los eventos en el topic `rapidgo.sla.entregas` con key `order_id` y 3 particiones, para que todos los eventos de un pedido lleguen en orden a la misma partición (ver `docs/decisions/ADR-001-key-y-particiones-kafka.md`).
+Publicar los eventos en el topic `rapidgo.sla.entregas` con key `order_id` y 3 particiones, para que todos los eventos de un pedido lleguen en orden a la misma partición (ver [ADR-001](../decisions/ADR-001-key-y-particiones-kafka.md)).
 
 ## Riesgo principal
 La alerta `ENTREGA_DETENIDA` necesita que el producer emita un latido `EN_RUTA` cada 5 min y que Spark mantenga estado por pedido con timeout. Si el producer no genera esos casos de forma realista, no podremos demostrar la alerta.
@@ -15,6 +15,6 @@ La alerta `ENTREGA_DETENIDA` necesita que el producer emita un latido `EN_RUTA` 
 - Roles de la Semana 2 según la guía: Kafka/Producer, Spark/Data Lake y Tests/CI.
 
 ## Enlaces
-- Issues: https://github.com/USUARIO/Rapidgo-Grupo10/issues
-- Pull Requests: https://github.com/USUARIO/Rapidgo-Grupo10/pulls?q=is%3Apr
-- Release: https://github.com/USUARIO/Rapidgo-Grupo10/releases/tag/v0.1.0-foundation
+- Issues: https://github.com/AngelaP852/Rapidgo-Grupo10/issues
+- Pull Requests: https://github.com/AngelaP852/Rapidgo-Grupo10/pulls?q=is%3Apr
+- Release: https://github.com/AngelaP852/Rapidgo-Grupo10/releases/tag/v0.1.0-foundation
