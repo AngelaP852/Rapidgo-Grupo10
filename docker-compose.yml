@@ -1,4 +1,5 @@
 # Preliminar (Semana 1): solo Kafka y la creacion del topic.
+# Semana 2: Se agrega Spark Structured Streaming.
 services:
   kafka:
     image: apache/kafka:3.8.0
@@ -31,3 +32,23 @@ services:
       --create --if-not-exists --topic rapidgo.sla.entregas
       --partitions 3 --replication-factor 1"
     restart: "no"
+
+  # --- SEMANA 2 ---
+   spark:
+    image: apache/spark:3.5.9-scala2.12-java17-python3-ubuntu
+    container_name: rapidgo-spark
+    depends_on:
+      - kafka
+    ports:
+      - "4040:4040"
+    volumes:
+      - ./spark:/opt/spark/apps
+      - ./datalake:/opt/spark/datalake
+    environment:
+      - SPARK_MODE=master
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[*]
+      --conf spark.jars.ivy=/tmp/.ivy
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.8.0
+      /opt/spark/apps/streaming_job.py
