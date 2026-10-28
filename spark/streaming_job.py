@@ -100,6 +100,13 @@ def main():
         .option("subscribe", "rapidgo.sla.entregas") \
         .option("startingOffsets", "latest") \
         .load()
+    df = spark.readStream \
+        .format("kafka") \
+        .option("kafka.bootstrap.servers", "kafka:29092") \
+        .option("subscribe", "rapidgo.sla.entregas") \
+        .option("startingOffsets", "latest") \
+        .option("failOnDataLoss", "false") \
+        .load()
 
     # 3. Parsear el JSON y convertir timestamps
     parsed_df = df.select(
@@ -183,7 +190,7 @@ def main():
 
     # --- TAREA 6: Alertas con estado ---
     
-    from pyspark.sql.streaming import GroupStateTimeout
+    from pyspark.sql.streaming.state import GroupStateTimeout
     
 
     alerts_df = dedup_df \
