@@ -44,9 +44,11 @@ services:
     environment:
       - SPARK_MODE=master
     command: >
+      bash -c "
+      pip install pandas pyarrow &&
       /opt/spark/bin/spark-submit
       --master local[*]
       --conf spark.jars.ivy=/tmp/.ivy
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.9
       /opt/spark/apps/streaming_job.py
-      
+      "
