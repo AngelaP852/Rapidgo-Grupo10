@@ -9,7 +9,7 @@ Docente: Ing. Oscar Jobany Gomez Ochoa
 | **Equipo** | Grupo 10 |
 | **Integrantes** | Daniela Gomez Castro · Angela Maria Palacios Alonso · Ana Karina Arenales Bautista |
 | **Variante** | 1 — SLA de entregas |
-| **Versión actual** | En preparación (v0.1.0-foundation, Semana 1 · diseño y organización) |
+| **Versión actual** | v0.1.0-foundation (Semana 1 · diseño y organización) |
 | **Tablero Kanban** | https://github.com/users/AngelaP852/projects/4/views/1 |
 
 ## Problema de negocio
@@ -25,7 +25,7 @@ RapidGo necesita detectar retrasos e incumplimientos de los tiempos prometidos a
 | Componente | Función en la variante |
 |---|---|
 | Producer (Python) | Genera eventos de cambio de estado de pedidos y un latido `EN_RUTA` cada 5 min |
-| Kafka | Transporta los eventos en el topic `rapidgo.sla.pedidos` (key `order_id`, 3 particiones) |
+| Kafka | Transporta los eventos en el topic `rapidgo.sla.entregas` (key `order_id`, 3 particiones) |
 | Spark Structured Streaming | Lee, valida el contrato, transforma, calcula KPIs por ventana y reglas de alerta |
 | Data Lake (Parquet) | Capas raw → processed → curated, con checkpoint |
 | Airflow | Valida la calidad, agrega, genera el reporte y evalúa alertas; reintentos y fallo controlado (Semana 3) |
@@ -33,7 +33,7 @@ RapidGo necesita detectar retrasos e incumplimientos de los tiempos prometidos a
 
 ## Contrato del evento
 
-Evento de cambio de estado de un pedido. Detalle de campos y reglas en [`docs/contrato_evento.md`](docs/contrato_evento.md); ejemplos en `samples/eventos_pedido.json` (evento suelto) y `samples/eventos_ciclo_vida.jsonl` (ciclo de vida de dos pedidos).
+Evento de cambio de estado de un pedido. Detalle de campos y reglas en [`docs/contrato_evento.md`](docs/contrato_evento.md); ejemplos en `samples/eventos_pedido.json` (evento suelto), `samples/eventos_ciclo_vida.jsonl` (ciclo de vida de dos pedidos) y `samples/eventos_entrega_detenida.jsonl` (pedido que termina en `DETENIDO`).
 
 ```json
 {
@@ -41,11 +41,11 @@ Evento de cambio de estado de un pedido. Detalle de campos y reglas en [`docs/co
   "team_id": "equipo-v1",
   "order_id": "ORD-000125",
   "status": "EN_RUTA",
-  "zone": "Sur",
+  "zone": "Centro",
   "distance_km": 4.5,
-  "created_at": "2026-10-21T14:10:00Z",
-  "promised_at": "2026-10-21T14:55:00Z",
-  "event_ts": "2026-10-21T14:25:00Z"
+  "created_at": "2026-10-21T14:00:00Z",
+  "promised_at": "2026-10-21T14:45:00Z",
+  "event_ts": "2026-10-21T14:20:00Z"
 }
 ```
 
@@ -55,9 +55,9 @@ Estados: `CREADO → ASIGNADO → RECOGIDO → EN_RUTA → ENTREGADO`, más `DET
 
 | Topic | Clave | Particiones | Replicación | Retención |
 |---|---|---|---|---|
-| `rapidgo.sla.pedidos` | `order_id` | 3 | 1 | 7 días |
+| `rapidgo.sla.entregas` | `order_id` | 3 | 1 | 7 días |
 
-Valores propuestos; la justificación y la decisión final están en el [ADR-001](https://github.com/AngelaP852/Rapidgo-Grupo10/tree/main/docs/decisions).
+Valores propuestos; la justificación y la decisión están en el [ADR-001](docs/decisions/ADR-001-key-y-particiones-kafka.md). La distribución real por partición se medirá en la Semana 2.
 
 ## Indicadores y alertas (umbrales iniciales)
 
@@ -74,11 +74,11 @@ Detalle completo en [`docs/kpis_y_alertas.md`](docs/kpis_y_alertas.md).
 | A1 SLA_EXCEDIDO | pedido sin `ENTREGADO`/`CANCELADO` y `ahora > promised_at + 5 min` |
 | A2 ENTREGA_DETENIDA | pedido en `EN_RUTA` o `DETENIDO` sin eventos nuevos por más de 10 min |
 
-El SLA se calcula como `promised_at = created_at + 10 min + 8 min × distance_km`, redondeado a múltiplos de 5 min. Los umbrales son hipótesis iniciales y se revisarán en la Semana 2 con datos reales.
+El SLA se calcula como `promised_at = created_at + 10 min + 8 min × distance_km`, redondeado al múltiplo de 5 min más cercano. Los umbrales son hipótesis iniciales y se revisarán en la Semana 2 con datos reales.
 
 ## Ejecución local (estado de la Semana 1)
 
-Pendiente: se documentará cuando el `docker-compose.yml` y el producer estén funcionando (Semana 2), con comandos realmente probados.
+Pendiente: se documentará cuando el producer y Spark estén funcionando (Semana 2), con comandos realmente probados. El `docker-compose.yml` actual es preliminar: solo levanta Kafka y crea el topic `rapidgo.sla.entregas` con 3 particiones.
 
 ## Plan de versiones
 
@@ -98,7 +98,7 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 - Contrato del evento: [`docs/contrato_evento.md`](docs/contrato_evento.md)
 - Indicadores y alertas: [`docs/kpis_y_alertas.md`](docs/kpis_y_alertas.md)
 - Registros de decisiones (ADR): [`docs/decisions/`](docs/decisions/)
-
+- Checkpoints semanales: [`docs/checkpoints/`](docs/checkpoints/)
 
 ## Contribuciones (Semana 1)
 
@@ -107,6 +107,5 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 | Ana Karina Arenales Bautista | Contrato JSON y ejemplos, KPIs y alertas, README inicial |
 | Angela Maria Palacios Alonso | Creación del repositorio, particiones y topic, revisiones |
 | Daniela Gomez Castro | Tablero Kanban |
-
 
 Se actualizará cada semana. Enlace al video final: pendiente (Semana 4).

@@ -1,7 +1,7 @@
 # Contrato del evento de pedido – Variante 1 (SLA de entregas)
 
 Cada evento representa un **cambio de estado de un pedido**.
-Se publica en Kafka como JSON. La key del mensaje es `order_id`.
+Se publica en Kafka como JSON, en el topic `rapidgo.sla.entregas`. La key del mensaje es `order_id`.
 
 ## Campos
 
@@ -9,7 +9,7 @@ Se publica en Kafka como JSON. La key del mensaje es `order_id`.
 |---|---|---|---|
 | event_id | string | Sí | Identificador único del evento |
 | team_id | string | Sí | Identifica al equipo que genera el evento |
-| order_id | string | Sí | Identificador del pedido |
+| order_id | string | Sí | Identificador del pedido (también es la key del mensaje) |
 | status | string | Sí | Estado del pedido (ver valores permitidos) |
 | zone | string | Sí | Zona de entrega |
 | distance_km | number | Sí | Distancia del recorrido en km (> 0) |
@@ -23,6 +23,8 @@ CREADO → ASIGNADO → RECOGIDO → EN_RUTA → ENTREGADO
 
 Estados especiales: DETENIDO (entrega parada), CANCELADO.
 
+Mientras un pedido está `EN_RUTA`, el producer emite un evento de latido `EN_RUTA` cada 5 min (se usa para la alerta A2).
+
 ## Reglas de validación
 
 - Todos los campos son obligatorios.
@@ -31,7 +33,10 @@ Estados especiales: DETENIDO (entrega parada), CANCELADO.
 - Las fechas van en ISO 8601 con zona UTC (terminan en `Z`).
 - `event_ts` >= `created_at`.
 - `promised_at` > `created_at`.
+- `promised_at` = `created_at` + 10 min + 8 min × `distance_km`, redondeado al múltiplo de 5 min más cercano.
 
 ## Ejemplos
 
-Ver `samples/eventos_pedido.json` y `samples/eventos_ciclo_vida.jsonl`.
+- `samples/eventos_pedido.json`: un evento suelto.
+- `samples/eventos_ciclo_vida.jsonl`: ciclo de vida de dos pedidos (uno cumple el SLA y otro no).
+- `samples/eventos_entrega_detenida.jsonl`: pedido que pasa a `DETENIDO` (caso de la alerta A2).
