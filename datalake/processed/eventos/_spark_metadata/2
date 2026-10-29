@@ -1,2 +1,0 @@
-v1
-{"path":"file:///opt/spark/datalake/processed/eventos/part-00000-10086dff-f19d-45ed-aa9e-a523ac854edc-c000.snappy.parquet","size":2747,"isDir":false,"modificationTime":1793213428948,"blockReplication":1,"blockSize":33554432,"action":"add"}

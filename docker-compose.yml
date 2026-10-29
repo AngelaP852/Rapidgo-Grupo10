@@ -1,3 +1,4 @@
+# Preliminar (Semana 1): solo Kafka y la creacion del topic.
 services:
   kafka:
     image: apache/kafka:3.8.0
@@ -30,26 +31,3 @@ services:
       --create --if-not-exists --topic rapidgo.sla.entregas
       --partitions 3 --replication-factor 1"
     restart: "no"
-
-  spark:
-    image: apache/spark:3.5.9-scala2.12-java17-python3-ubuntu
-    container_name: rapidgo-spark
-    depends_on:
-      - kafka
-    ports:
-      - "4040:4040"
-    volumes:
-      - ./spark:/opt/spark/apps
-      - ./datalake:/opt/spark/datalake
-    environment:
-      - SPARK_MODE=master
-      - PYTHONPATH=/tmp/pip-install
-    command: >
-      bash -c "
-      pip install --target=/tmp/pip-install pandas pyarrow &&
-      /opt/spark/bin/spark-submit
-      --master local[*]
-      --conf spark.jars.ivy=/tmp/.ivy
-      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.9
-      /opt/spark/apps/streaming_job.py
-      "

@@ -1,2 +1,0 @@
-v1
-{"path":"file:///opt/spark/datalake/raw/invalidos/part-00000-58997c65-0a54-4da7-b509-4cc7194f7c81-c000.snappy.parquet","size":1024,"isDir":false,"modificationTime":1793213428967,"blockReplication":1,"blockSize":33554432,"action":"add"}
