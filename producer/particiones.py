@@ -1,5 +1,6 @@
 """Analisis de como se reparten los mensajes entre las particiones de Kafka.
 
+Es logica pura (sin Kafka): la usan producer.py y check_partitions.py.
 Entrada: pares (particion, key). La key del mensaje es el order_id.
 """
 from __future__ import annotations

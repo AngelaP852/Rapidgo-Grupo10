@@ -1,21 +1,4 @@
 """Producer de RapidGo: genera el ciclo de vida de los pedidos y lo publica en Kafka.
-
-Ejemplos (desde la raiz del repo):
-
-  # Publicar 20 pedidos en Kafka (localhost:9092, topic rapidgo.sla.entregas)
-  python -m producer.producer --n-pedidos 20 --seed 42
-
-  # Sin Kafka: imprimir los eventos como JSON, uno por linea
-  python -m producer.producer --n-pedidos 20 --seed 42 --dry-run
-
-  # Guardar los eventos en un archivo (sirve para probar Spark leyendo archivos)
-  python -m producer.producer --n-pedidos 20 --seed 42 --dry-run --salida eventos.jsonl
-
-  # Ritmo "en vivo": 10 minutos simulados por segundo real
-  python -m producer.producer --n-pedidos 20 --seed 42 --velocidad 10
-
-La key de cada mensaje es order_id: todos los eventos de un pedido van a la misma
-particion.
 """
 from __future__ import annotations
 
