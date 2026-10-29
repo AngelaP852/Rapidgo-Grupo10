@@ -1,0 +1,17 @@
+# Dependencias del proyecto RapidGo (usadas por producer, spark y tests).
+# Instalar: python -m pip install -r requirements.txt
+
+# --- Producer (Kafka) ---
+kafka-python>=2.2,<4
+
+# --- Tests ---
+pytest>=8
+
+# --- Spark (para correr el job y sus pruebas fuera de Docker) ---
+# La version de pyspark debe coincidir con la de la imagen de Spark del compose.
+# Spark 3.5 necesita Java 17 (no 21) para las funciones con pandas.
+pyspark==3.5.9
+pandas==2.2.3
+numpy<2
+pyarrow==16.1.0
+setuptools   # Python 3.12: pyspark 3.5 todavia usa distutils
