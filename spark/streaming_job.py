@@ -1,92 +1,66 @@
-import os
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, to_timestamp
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType
-
-# 1. Definir el esquema según contrato_evento.md
-schema = StructType([
-    StructField("event_id", StringType(), True),
-    StructField("team_id", StringType(), True),
-    StructField("order_id", StringType(), True),
-    StructField("status", StringType(), True),
-    StructField("zone", StringType(), True),
-    StructField("distance_km", DoubleType(), True),
-    StructField("created_at", StringType(), True),
-    StructField("promised_at", StringType(), True),
-    StructField("event_ts", StringType(), True)
-])
+from pyspark.sql.functions import col, from_json, current_timestamp, unix_timestamp, when, lit
+from pyspark.sql.types import StructType, StructField, StringType, TimestampType
 
 def main():
-    # Inicializar Spark
+    # Inicialización de la sesión de Spark para Streaming
     spark = SparkSession.builder \
-        .appName("RapidGo-SLA-Streaming") \
+        .appName("RapidgoSLAStreaming") \
         .getOrCreate()
-        
-    # Reducir logs para ver mejor la salida en consola
+
     spark.sparkContext.setLogLevel("WARN")
 
-    print("Iniciando lectura de Kafka...")
+    # Definición del esquema de contrato del evento
+    schema = StructType([
+        StructField("order_id", StringType(), True),
+        StructField("status", StringType(), True),
+        StructField("event_ts", TimestampType(), True),
+        StructField("promised_at", TimestampType(), True),
+        StructField("latitude", StringType(), True),
+        StructField("longitude", StringType(), True)
+    ])
 
-    # 2. Leer de Kafka
-    df = spark.readStream \
+    # 1. Lectura del flujo de datos desde Kafka
+    kafka_df = spark.readStream \
         .format("kafka") \
-        .option("kafka.bootstrap.servers", "kafka:29092") \
+        .option("kafka.bootstrap.servers", "localhost:9092") \
         .option("subscribe", "rapidgo.sla.entregas") \
         .option("startingOffsets", "latest") \
         .load()
 
-    # 3. Parsear el JSON y convertir timestamps a tipo Timestamp real
-    parsed_df = df.select(
-        from_json(col("value").cast("string"), schema).alias("data")
-    ).select("data.*")
+    # 2. Parseo del JSON a columnas estructuradas
+    parsed_df = kafka_df.selectExpr("CAST(value AS STRING) as json_value") \
+        .select(from_json(col("json_value"), schema).alias("data")) \
+        .select("data.*")
 
-    # Convertir strings ISO 8601 (ej. 2026-10-21T14:20:00Z) a Timestamps
-    final_df = parsed_df.withColumn(
-        "event_ts", to_timestamp(col("event_ts"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+    # 3. Aplicación de transformaciones y reglas de negocio / alertas corregidas
+    # A1: Pedido activo cuyo event_ts sobrepasa el promised_at
+    # A2: Pedido EN_RUTA o DETENIDO con más de 10 minutos (600 segundos) de inactividad respecto al tiempo actual
+    processed_df = parsed_df.withColumn(
+        "alerta_a1",
+        when(
+            (col("status").isin("ASIGNADO", "EN_RUTA")) & 
+            (col("event_ts") > col("promised_at")), 
+            lit(True)
+        ).otherwise(lit(False))
     ).withColumn(
-        "created_at", to_timestamp(col("created_at"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
-    ).withColumn(
-        "promised_at", to_timestamp(col("promised_at"), "yyyy-MM-dd'T'HH:mm:ss'Z'")
+        "alerta_a2",
+        when(
+            (col("status").isin("EN_RUTA", "DETENIDO")) & 
+            ((unix_timestamp(current_timestamp()) - unix_timestamp(col("event_ts"))) > 600), 
+            lit(True)
+        ).otherwise(lit(False))
     )
 
-    # 4. Validar el contrato (Tarea 3)
-    # Reglas: distance_km > 0, status permitido, y event_ts >= created_at
-    valid_status = ["CREADO", "ASIGNADO", "RECOGIDO", "EN_RUTA", "ENTREGADO", "DETENIDO", "CANCELADO"]
-    
-    # Filtro de eventos VÁLIDOS (Pasan a processed)
-    valid_df = final_df.filter(
-        (col("distance_km") > 0) & 
-        (col("status").isin(valid_status)) &
-        (col("event_ts") >= col("created_at"))
-    )
-
-    # Filtro de eventos INVÁLIDOS (Se van a raw/cuarentena)
-    invalid_df = final_df.filter(
-        (col("distance_km") <= 0) | 
-        (~col("status").isin(valid_status)) |
-        (col("event_ts") < col("created_at"))
-    )
-
-    # 5. Escribir válidos en 'processed' (Tarea 7 - parte 1)
-    query_processed = valid_df.writeStream \
-        .outputMode("append") \
+    # 4. Escritura en formato Parquet en el Data Lake con soporte de Checkpoint
+    query = processed_df.writeStream \
         .format("parquet") \
-        .option("path", "/opt/spark/datalake/processed/eventos") \
-        .option("checkpointLocation", "/opt/spark/datalake/checkpoints/processed") \
+        .option("path", "/app/datalake/silver/sla_entregas") \
+        .option("checkpointLocation", "/app/datalake/checkpoint/sla_entregas") \
+        .outputMode("append") \
         .start()
 
-    # 6. Escribir inválidos en 'raw' (cuarentena)
-    query_raw = invalid_df.writeStream \
-        .outputMode("append") \
-        .format("parquet") \
-        .option("path", "/opt/spark/datalake/raw/invalidos") \
-        .option("checkpointLocation", "/opt/spark/datalake/checkpoints/raw_invalidos") \
-        .start()
-
-    print("Streams iniciados. Esperando datos...")
-    
-    # Mantener la aplicación corriendo
-    spark.streams.awaitAnyTermination()
+    query.awaitTermination()
 
 if __name__ == "__main__":
     main()
