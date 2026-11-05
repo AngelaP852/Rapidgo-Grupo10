@@ -2,7 +2,12 @@
 Pruebas unitarias para las funciones de calidad de la Semana 3 (Variante 1).
 """
 
-import pytest
+import sys
+import os
+
+# Esto le indica a Python exactamente dónde buscar el código del proyecto
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from airflow.utils.quality_checks import validar_raw, validar_curated
 
 def test_validar_raw_exitoso():
