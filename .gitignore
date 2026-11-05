@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Datos generados por Spark (no se suben a Git)
+datalake/checkpoints/
+datalake/raw/
+datalake/processed/
+datalake/curated/
