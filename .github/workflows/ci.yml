@@ -37,7 +37,7 @@ jobs:
         run: python -m compileall -q spark tests producer
 
       - name: Pruebas
-        run: python -m pytest -v || [ $? -eq 5 ]
+        run: python -m pytest -v 
 
       - name: Validar docker-compose
         run: docker compose config --quiet
