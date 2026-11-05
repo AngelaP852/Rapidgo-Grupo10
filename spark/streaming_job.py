@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col, to_timestamp, when, unix_timestamp, window, avg, sum, count, round
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType
 import pandas as pd
-from datetime import timedelta
+from datetime import timedelta, datetime,timezone 
 
 # 1. Definir el esquema según contrato_evento.md
 schema = StructType([
@@ -84,22 +84,14 @@ def update_state_and_check_alerts(key, pdf_iter, state):
     return iter([pd.DataFrame(alerts)])
 
 def main():
-    # Inicializar Spark
+    # Inicialización de la sesión de Spark para Streaming
     spark = SparkSession.builder \
-        .appName("RapidGo-SLA-Streaming") \
+        .appName("RapidgoSLAStreaming") \
         .getOrCreate()
         
     spark.sparkContext.setLogLevel("WARN")
 
-    print("Iniciando lectura de Kafka...")
-
-    # 2. Leer de Kafka
-    df = spark.readStream \
-        .format("kafka") \
-        .option("kafka.bootstrap.servers", "kafka:29092") \
-        .option("subscribe", "rapidgo.sla.entregas") \
-        .option("startingOffsets", "latest") \
-        .load()
+    # 1. Lectura del flujo de datos desde Kafka
     df = spark.readStream \
         .format("kafka") \
         .option("kafka.bootstrap.servers", "kafka:29092") \
@@ -180,18 +172,16 @@ def main():
         .option("checkpointLocation", "/opt/spark/datalake/checkpoints/curated_kpis") \
         .start()
 
-    # 6. Escribir inválidos en 'raw'
+    # 6. Escribir inválidos
     query_raw = invalid_df.writeStream \
         .outputMode("append") \
         .format("parquet") \
         .option("path", "/opt/spark/datalake/raw/invalidos") \
-        .option("checkpointLocation", "/opt/spark/datalake/checkpoints/raw_invalidos") \
+        .option("checkpointLocation", "/opt/spark/datalake/checkpoints/invalidos") \
         .start()
 
     # --- TAREA 6: Alertas con estado ---
-    
     from pyspark.sql.streaming.state import GroupStateTimeout
-    
 
     alerts_df = dedup_df \
         .groupBy("order_id") \
