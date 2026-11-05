@@ -1,8 +1,9 @@
+import os
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col, to_timestamp, when, unix_timestamp, window, avg, sum, count, round
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType
 import pandas as pd
-from datetime import timedelta
+from datetime import timedelta, datetime,timezone 
 
 # 1. Definir el esquema según contrato_evento.md
 schema = StructType([
