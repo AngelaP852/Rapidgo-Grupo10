@@ -74,6 +74,10 @@ def leer_argumentos(argv=None):
     p.add_argument("--p-retrasado", type=float, default=0.25, help="proporcion de pedidos retrasados (0.25)")
     p.add_argument("--p-detenido", type=float, default=0.10, help="proporcion de pedidos detenidos (0.10)")
     p.add_argument("--p-cancelado", type=float, default=0.05, help="proporcion de pedidos cancelados (0.05)")
+    p.add_argument("--primer-pedido", type=int, default=1,
+                   help="numero del primer pedido, ORD-000001 por defecto (usar otro al publicar un segundo lote)")
+    p.add_argument("--primer-evento", type=int, default=1,
+                   help="numero del primer evento, EVT-000001 por defecto (usar otro al publicar un segundo lote)")
     p.add_argument("--velocidad", type=float, default=0.0,
                    help="minutos simulados por segundo real; 0 = sin pausas (0)")
     p.add_argument("--bootstrap", default=BOOTSTRAP_POR_DEFECTO, help=f"broker de Kafka ({BOOTSTRAP_POR_DEFECTO})")
@@ -90,6 +94,7 @@ def main(argv=None) -> int:
         eventos = generar_eventos(
             args.n_pedidos, seed=args.seed, inicio=inicio,
             p_retrasado=args.p_retrasado, p_detenido=args.p_detenido, p_cancelado=args.p_cancelado,
+            primer_pedido=args.primer_pedido, primer_evento=args.primer_evento,
         )
     except ValueError as error:
         print(f"Parametros invalidos: {error}", file=sys.stderr)

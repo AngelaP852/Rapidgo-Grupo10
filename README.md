@@ -76,9 +76,52 @@ Detalle completo en [`docs/kpis_y_alertas.md`](docs/kpis_y_alertas.md).
 
 El SLA se calcula como `promised_at = created_at + 10 min + 8 min × distance_km`, redondeado al múltiplo de 5 min más cercano. Los umbrales son hipótesis iniciales y se revisarán en la Semana 2 con datos reales.
 
-## Ejecución local (estado de la Semana 1)
+## Ejecución local
 
-Pendiente: se documentará cuando el producer y Spark estén funcionando (Semana 2), con comandos realmente probados. El `docker-compose.yml` actual es preliminar: solo levanta Kafka y crea el topic `rapidgo.sla.entregas` con 3 particiones.
+Requisitos: Docker Desktop abierto y Python 3.11 con `python -m pip install -r requirements.txt`. Los comandos son de PowerShell, desde la raíz del repo.
+
+**1. Levantar Kafka y Spark**
+
+```
+docker compose up -d
+docker compose logs -f spark
+```
+
+Kafka crea el topic `rapidgo.sla.entregas` con 3 particiones. Spark tarda 1 o 2 minutos en instalar sus paquetes. Cuando el log muestre `Streams iniciados. Esperando datos...`, salir con Ctrl + C (Spark sigue corriendo). Spark lee desde `latest`, así que los eventos se publican **después** de este paso.
+
+**2. Publicar eventos**
+
+Primer lote: 3 pedidos que quedan `DETENIDO` y nunca se cierran.
+
+```
+python producer/producer.py --n-pedidos 3 --seed 2 --inicio 2026-10-21T14:00:00Z --p-retrasado 0 --p-detenido 1 --p-cancelado 0
+```
+
+Segundo lote: 3 pedidos sanos horas después, con otros ids. Hace avanzar el watermark de Spark, que es lo que dispara las alertas por silencio.
+
+```
+python producer/producer.py --n-pedidos 3 --seed 9 --inicio 2026-10-21T18:00:00Z --p-retrasado 0 --p-detenido 0 --p-cancelado 0 --primer-pedido 500 --primer-evento 5000
+```
+
+**3. Ver las alertas** (esperar 1 minuto)
+
+```
+python -c "import pandas as pd; print(pd.read_parquet('datalake/curated/alertas').sort_values(['order_id','alerta']).to_string())"
+```
+
+Resultado esperado: 6 filas, con `A1_SLA_EXCEDIDO` y `A2_ENTREGA_DETENIDA` para ORD-000001, ORD-000002 y ORD-000003, y ninguna para los pedidos sanos ORD-000500 a ORD-000502. Si no aparece nada, publicar otro lote sano con `--inicio 2026-10-21T19:00:00Z --primer-pedido 510 --primer-evento 5100` y esperar otro minuto.
+
+Los KPIs quedan en `datalake/curated/kpis` y los eventos inválidos en `datalake/raw/invalidos`.
+
+**4. Apagar y limpiar**
+
+```
+docker compose down
+Remove-Item -Recurse -Force datalake\checkpoints, datalake\curated, datalake\processed, datalake\raw -ErrorAction SilentlyContinue
+```
+
+No usar `-v` en `docker compose down`. Hay que borrar las carpetas del Data Lake entre pruebas para no mezclar checkpoints viejos.
+
 
 ## Plan de versiones
 
