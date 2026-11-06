@@ -221,5 +221,6 @@ __marimo__/
 # Datos generados por Spark (no se suben a Git)
 datalake/checkpoints/
 datalake/raw/
+datalake/rejected/
 datalake/processed/
 datalake/curated/

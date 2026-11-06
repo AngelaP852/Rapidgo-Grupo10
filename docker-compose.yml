@@ -1,3 +1,6 @@
+# Semana 2: Kafka + creación del topic + Spark Structured Streaming.
+#   docker compose up -d                      -> todo
+#   docker compose up -d kafka kafka-init     -> solo Kafka (para probar el producer)
 services:
   kafka:
     image: apache/kafka:3.8.0
@@ -35,21 +38,24 @@ services:
     image: apache/spark:3.5.9-scala2.12-java17-python3-ubuntu
     container_name: rapidgo-spark
     depends_on:
-      - kafka
+      kafka-init:
+        condition: service_completed_successfully   # espera a que el topic exista
     ports:
       - "4040:4040"
     volumes:
       - ./spark:/opt/spark/apps
       - ./datalake:/opt/spark/datalake
     environment:
-      - SPARK_MODE=master
       - PYTHONPATH=/tmp/pip-install
+    # pandas y pyarrow son necesarios para applyInPandasWithState; versiones fijas
+    # (las mismas de requirements.txt) porque pandas 3 no es compatible con Spark 3.5.
     command: >
       bash -c "
-      pip install --target=/tmp/pip-install pandas pyarrow &&
+      pip install --no-cache-dir --target=/tmp/pip-install pandas==2.2.3 pyarrow==16.1.0 'numpy<2' &&
       /opt/spark/bin/spark-submit
       --master local[*]
       --conf spark.jars.ivy=/tmp/.ivy
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.9
       /opt/spark/apps/streaming_job.py
+      --source kafka --bootstrap kafka:29092 --topic rapidgo.sla.entregas
       "
