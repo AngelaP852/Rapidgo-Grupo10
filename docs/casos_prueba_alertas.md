@@ -66,5 +66,12 @@ Todas las horas son del 2026-10-21, en UTC.
 2. Fijar el valor de `ahora`.
 3. Evaluar la regla y comparar con la columna "Resultado esperado".
 
-Estos casos son la base para `tests/test_alertas.py`, que se escribirá cuando
-la lógica de las alertas quede en funciones que se puedan probar sin Spark.
+Estos casos se prueban en `tests/test_alertas.py`, con las funciones puras de
+`spark/alertas_estado.py` (sin Spark). Los resultados de la tabla son la **foto en el instante
+`ahora`**: un pedido ya cerrado no genera avisos nuevos (A1-05 y A1-08).
+
+El job de Spark procesa eventos que pueden llegar con retraso, así que además emite el aviso
+**cuando llega el evento que revela que el límite ya se había cumplido**. Por ejemplo, ORD-000123
+recibe `ENTREGADO` a las 14:41, después del límite de las 14:40: A1 se registra con `momento`
+14:40 una sola vez, y a las 14:45 no se vuelve a generar nada. La prueba de punta a punta de ese
+comportamiento es `tests/integracion_spark.py`.

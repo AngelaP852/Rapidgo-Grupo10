@@ -76,9 +76,35 @@ Detalle completo en [`docs/kpis_y_alertas.md`](docs/kpis_y_alertas.md).
 
 El SLA se calcula como `promised_at = created_at + 10 min + 8 min × distance_km`, redondeado al múltiplo de 5 min más cercano. Los umbrales son hipótesis iniciales y se revisarán en la Semana 2 con datos reales.
 
-## Ejecución local (estado de la Semana 1)
+## Ejecución local
 
-Pendiente: se documentará cuando el producer y Spark estén funcionando (Semana 2), con comandos realmente probados. El `docker-compose.yml` actual es preliminar: solo levanta Kafka y crea el topic `rapidgo.sla.entregas` con 3 particiones.
+Requisitos: Docker Desktop y Python 3.10 o superior.
+
+```powershell
+# 1. Levantar Kafka, crear el topic (3 particiones) y arrancar Spark
+docker compose up -d
+docker compose logs -f spark          # esperar la línea "Streams iniciados" (Ctrl+C para salir del log)
+
+# 2. En otra terminal: generar eventos y publicarlos en Kafka
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m producer.producer --n-pedidos 200 --seed 42
+
+# 3. Ver lo que escribió Spark en datalake/ (raw, rejected, processed, curated)
+python spark/leer_datalake.py
+
+# 4. Verificar la distribución por partición (evidencia del ADR-001)
+python -m producer.check_partitions --markdown --nota "200 pedidos, --seed 42"
+
+# 5. Apagar (el topic y los datos de Kafka se pierden; datalake/ se conserva)
+docker compose down
+```
+
+- `python -m producer.producer --help` lista las opciones; con `--dry-run` genera eventos sin usar Kafka.
+- Los resultados de `datalake/` no se versionan. Para empezar de cero, ver [`datalake/README.md`](datalake/README.md).
+- Las alertas y las ventanas de KPIs más recientes aparecen cuando llegan eventos posteriores (Spark usa el tiempo de los eventos).
+- Prueba del job sin Kafka (requiere Java 17): `python tests/integracion_spark.py`.
 
 ## Plan de versiones
 

@@ -47,3 +47,12 @@ Se calculan en Spark por ventana de 5 min sobre `event_ts`, agrupados por `zone`
 - A2 necesita estado por pedido en Spark con timeout. Si el producer no emite el latido `EN_RUTA` cada 5 min, la alerta se dispararía en pedidos sanos.
 - Con `samples/eventos_ciclo_vida.jsonl`, ORD-000123 dispara A1 a las 14:40 (`promised_at + 5 min`), antes de entregarse a las 14:41.
 - Con `samples/eventos_entrega_detenida.jsonl`, ORD-000126 queda `DETENIDO` a las 14:18 sin eventos posteriores, así que A2 se dispara a partir de las 14:28.
+
+## Cómo se implementan en Spark (Semana 2)
+
+- **Tiempo:** todo se mide con el tiempo de los eventos (`event_ts`) y el watermark del stream, no con el reloj del computador. Un aviso por inactividad se emite cuando llegan eventos posteriores que hacen avanzar el watermark (`--watermark-min`, 5 por defecto).
+- **K1 y K2** (`curated/kpis`): se calculan solo con eventos `ENTREGADO`, por ventana de 5 minutos de `event_ts` y por zona. K1 = `event_ts − created_at` en minutos; K2 = % con `event_ts > promised_at`.
+- **K3, A1 y A2** (`curated/alertas`): se guardan como avisos con la columna `alerta` (`K3_RETRASADO`, `A1_SLA_EXCEDIDO`, `A2_ENTREGA_DETENIDA`) y la hora en que la regla se cumplió (`momento`). K3 se registra una vez por pedido que cruza `promised_at` sin entregarse; el conteo por ventana se agrega en la Semana 3.
+- **Un aviso por pedido y regla.** A2 se reinicia si el pedido emite un evento nuevo, así que puede repetirse si se detiene otra vez.
+- **Pedidos entregados o cancelados tarde también avisan:** si `ENTREGADO` o `CANCELADO` llega después de `promised_at` (K3) o de `promised_at + 5 min` (A1), el pedido estuvo abierto durante ese tiempo y el aviso se emite al llegar ese evento.
+- **Un latido normal no dispara A2:** A2 solo se cumple cuando pasan más de 10 minutos sin ningún evento del pedido en `EN_RUTA` o `DETENIDO`.
