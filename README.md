@@ -143,12 +143,13 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 - Registros de decisiones (ADR): [`docs/decisions/`](docs/decisions/)
 - Checkpoints semanales: [`docs/checkpoints/`](docs/checkpoints/)
 
-## Contribuciones (Semana 1)
+## Tabla de Contribuciones y Roles de Equipo
 
-| Integrante | Trabajo realizado |
-|---|---|
-| Ana Karina Arenales Bautista | Contrato JSON y ejemplos, KPIs y alertas, README inicial |
-| Angela Maria Palacios Alonso | Creación del repositorio, particiones y topic, revisiones |
-| Daniela Gomez Castro | Tablero Kanban |
+| Integrante | Responsabilidades | Issues principales | Pull Requests principales |
+|---|---|---|---|
+| **Daniela Gómez Castro** | Tablero Kanban e Issues; CI con GitHub Actions; pruebas del contrato, de la fórmula del SLA y del producer; casos de prueba de las alertas; ejecución local en el README. | #9, #30, #35, #88, #93, #95 | #76 (ci.yml), #77 (tests de contrato y SLA), #84 (CI sin tolerancia), #89 (tests producer), #94 (casos de alertas), #96 (README de ejecución) |
+| **Angela María Palacios Alonso** | Repositorio y estructura; Docker Compose con Kafka; topic, key y particiones (ADR-001, ADR-002); producer y verificación de particiones; evidencias de la Semana 2. | #8, #29, #31, #33, #41, #43 | #19 (ADR-001), #20 (compose Kafka), #25 (checkpoint 1), #80 (producer y particiones), #81 (check_partitions), #99 (evidencias), #100 (ADR-002) |
+| **Ana Karina Arenales Bautista** | Contrato JSON y ejemplos; KPIs y alertas; README inicial; job de Spark Streaming (validación, transformaciones, KPIs, alertas con estado); DAG de Airflow y funciones de calidad. | #1, #2, #3, #32, #34, #36, #38, #39 | #4 (README), #5 (contrato), #62 (alertas estado), #92 (job de Spark); en revisión: #85, #86, #87, #90 |
+
 
 Se actualizará cada semana. Enlace al video final: pendiente (Semana 4).
