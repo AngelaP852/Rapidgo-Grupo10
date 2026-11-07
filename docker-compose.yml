@@ -53,3 +53,34 @@ services:
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.9
       /opt/spark/apps/streaming_job.py
       "
+
+        postgres-airflow:
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres_airflow_data:/var/lib/postgresql/data
+    networks:
+      - rapidgo-net
+
+  airflow-webserver:
+    image: apache/airflow:2.7.1-python3.11
+    depends_on:
+      - postgres-airflow
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./quality:/opt/airflow/quality
+    ports:
+      - "8080:8080"
+    command: db init && airflow users create --username admin --password admin --firstname Admin --lastname Admin --role Admin --email admin@example.com && airflow webserver
+    networks:
+      - rapidgo-net
+
+volumes:
+  postgres_airflow_data:
