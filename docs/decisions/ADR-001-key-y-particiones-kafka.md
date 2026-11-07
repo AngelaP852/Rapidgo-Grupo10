@@ -83,7 +83,20 @@ También se consideró utilizar `zone` como clave. Sin embargo, los pedidos de u
 
 ## 6. Estado de la evidencia
 
-Esta decisión corresponde al diseño de la Semana 1. La configuración todavía debe implementarse y validarse en el entorno del proyecto. No se afirma que se hayan realizado pruebas de rendimiento. Los resultados de la validación se agregarán en esta sección durante la Semana 2.
+Medición realizada el 2026-11-06 con el producer (`python -m producer.producer --n-pedidos 200 --seed 42`) sobre el topic `rapidgo.sla.entregas` (3 particiones, replicación 1, Kafka 3.8.0 en Docker). La distribución corresponde a la partición que Kafka asignó a cada mensaje enviado:
+
+| Partición | Mensajes | Pedidos distintos | % de mensajes |
+|---|---|---|---|
+| 0 | 794 | 71 | 36.7 % |
+| 1 | 690 | 66 | 31.9 % |
+| 2 | 677 | 63 | 31.3 % |
+
+- Total: 2161 mensajes de 200 pedidos; 0 mensajes sin key.
+- Ningún `order_id` tiene mensajes en más de una partición: la key `order_id` mantiene juntos los eventos de cada pedido.
+- La partición 0 concentra el 36.7 % de los mensajes. Con 200 pedidos el reparto es razonablemente parejo pero no uniforme, porque depende de cómo el hash de la key distribuye los pedidos.
+- Captura: [`docs/evidencias/semana2/04_particiones.png`](../evidencias/semana2/04_particiones.png).
+
+Esta medición comprueba la asignación de particiones por key; no es una prueba de rendimiento.
 
 ## 7. Referencias internas
 

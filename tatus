@@ -1,0 +1,27 @@
+warning: in the working copy of 'docs/decisions/ADR-001-key-y-particiones-kafka.md', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/docs/decisions/ADR-001-key-y-particiones-kafka.md b/docs/decisions/ADR-001-key-y-particiones-kafka.md[m
+[1mindex 31f9707..13b0679 100644[m
+[1m--- a/docs/decisions/ADR-001-key-y-particiones-kafka.md[m
+[1m+++ b/docs/decisions/ADR-001-key-y-particiones-kafka.md[m
+[36m@@ -83,7 +83,20 @@[m [mTambién se consideró utilizar `zone` como clave. Sin embargo, los pedidos de u[m
+ [m
+ ## 6. Estado de la evidencia[m
+ [m
+[31m-Esta decisión corresponde al diseño de la Semana 1. La configuración todavía debe implementarse y validarse en el entorno del proyecto. No se afirma que se hayan realizado pruebas de rendimiento. Los resultados de la validación se agregarán en esta sección durante la Semana 2.[m
+[32m+[m[32mMedición realizada el 2026-11-06 con el producer (`python -m producer.producer --n-pedidos 200 --seed 42`) sobre el topic `rapidgo.sla.entregas` (3 particiones, replicación 1, Kafka 3.8.0 en Docker). La distribución corresponde a la partición que Kafka asignó a cada mensaje enviado:[m
+[32m+[m
+[32m+[m[32m| Partición | Mensajes | Pedidos distintos | % de mensajes |[m
+[32m+[m[32m|---|---|---|---|[m
+[32m+[m[32m| 0 | 794 | 71 | 36.7 % |[m
+[32m+[m[32m| 1 | 690 | 66 | 31.9 % |[m
+[32m+[m[32m| 2 | 677 | 63 | 31.3 % |[m
+[32m+[m
+[32m+[m[32m- Total: 2161 mensajes de 200 pedidos; 0 mensajes sin key.[m
+[32m+[m[32m- Ningún `order_id` tiene mensajes en más de una partición: la key `order_id` mantiene juntos los eventos de cada pedido.[m
+[32m+[m[32m- La partición 0 concentra el 36.7 % de los mensajes. Con 200 pedidos el reparto es razonablemente parejo pero no uniforme, porque depende de cómo el hash de la key distribuye los pedidos.[m
+[32m+[m[32m- Captura: [`docs/evidencias/semana2/04_particiones.png`](../evidencias/semana2/04_particiones.png).[m
+[32m+[m
+[32m+[m[32mEsta medición comprueba la asignación de particiones por key; no es una prueba de rendimiento.[m
+ [m
+ ## 7. Referencias internas[m
+ [m
