@@ -1,5 +1,5 @@
 """
-DAG de Airflow para RapidGo - Variante 1: SLA de Entregas (Semana 3, Issue #46)
+DAG de Airflow para RapidGo - Variante 1: SLA de Entregas (Semana 3, Issues #46 y #49)
 
 check_fuentes -> validar_raw -> agregar -> validar_curated -> reporte
 
@@ -8,6 +8,11 @@ check_fuentes -> validar_raw -> agregar -> validar_curated -> reporte
 3. agregar:         calcula K1, K2 y K3 por zona.
 4. validar_curated: valida los KPIs con quality_checks.validar_curated.
 5. reporte:         resumen de K1-K3 y alertas A1/A2.
+
+Retries: default_args (2 reintentos, 1 minuto de espera).
+XCom: validar_raw publica "conteo_eventos"; validar_curated y reporte lo leen.
+Fallo controlado: con la Variable de Airflow "rapidgo_forzar_fallo" = "1",
+check_fuentes falla en el primer intento para observar el reintento.
 """
 
 import os
@@ -15,6 +20,7 @@ import sys
 from datetime import datetime, timedelta
 
 from airflow import DAG
+from airflow.models import Variable
 from airflow.operators.python import PythonOperator
 
 # El compose monta ./airflow/utils en /opt/airflow/utils
@@ -27,13 +33,17 @@ default_args = {
     "depends_on_past": False,
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 1,
-    "retry_delay": timedelta(minutes=2),
+    "retries": 2,
+    "retry_delay": timedelta(minutes=1),
 }
 
 
-def check_fuentes():
+def check_fuentes(ti):
     """Tarea 1: Kafka responde y processed/eventos tiene archivos."""
+    # Fallo controlado para la demo de retries (issue #49): solo si la Variable esta en "1"
+    if Variable.get("rapidgo_forzar_fallo", default_var="0") == "1" and ti.try_number == 1:
+        raise RuntimeError("Fallo controlado: primer intento forzado por la Variable rapidgo_forzar_fallo.")
+
     if not pt.kafka_disponible():
         raise RuntimeError(f"Kafka no responde en {pt.KAFKA_HOST}:{pt.KAFKA_PORT}")
 
@@ -46,13 +56,13 @@ def check_fuentes():
     return {"kafka": True, "archivos_parquet": n_archivos}
 
 
-def tarea_validar_raw():
+def tarea_validar_raw(ti):
     """Tarea 2: valida el contrato de los eventos leidos del Data Lake."""
     registros = pt.eventos_a_contrato_raw(pt.leer_eventos())
     if not validar_raw(registros):
         raise ValueError("Los eventos no cumplen el contrato de la Variante 1.")
     print(f"[validar_raw] {len(registros)} eventos validos.")
-    return {"eventos": len(registros)}
+    ti.xcom_push(key="conteo_eventos", value=len(registros))
 
 
 def agregar():
@@ -67,15 +77,20 @@ def agregar():
 def tarea_validar_curated(ti):
     """Tarea 4: valida los KPIs que dejo la tarea agregar."""
     kpis = ti.xcom_pull(task_ids="agregar")
+    conteo = ti.xcom_pull(task_ids="validar_raw", key="conteo_eventos")
+    if not conteo:
+        raise ValueError("No llego el conteo de eventos de validar_raw por XCom.")
     if not validar_curated(kpis):
         raise ValueError("Los KPIs de SLA tienen valores inconsistentes.")
-    print("[validar_curated] KPIs consistentes.")
+    print(f"[validar_curated] KPIs consistentes (calculados sobre {conteo} eventos).")
 
 
 def reporte(ti):
     """Tarea 5: imprime el resumen de K1-K3 y de alertas."""
     kpis = ti.xcom_pull(task_ids="agregar")
+    conteo = ti.xcom_pull(task_ids="validar_raw", key="conteo_eventos")
     print("===== REPORTE DE SLA - RAPIDGO (Variante 1) =====")
+    print(f"Eventos validados en esta corrida: {conteo}")
     for k in kpis:
         print(
             f"Zona {k['zona']}: K1 tiempo promedio = {k['tiempo_promedio']} min | "
