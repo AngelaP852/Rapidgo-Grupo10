@@ -10,6 +10,7 @@ Los avisos por inactividad (A2) y el cierre de las últimas ventanas de KPIs dep
 - **Particiones de Kafka:** 200 pedidos y 2161 mensajes, repartidos 794, 690 y 677 en las 3 particiones, 0 sin key y ningún `order_id` en más de una partición ([ADR-001, sección 6](../decisions/ADR-001-key-y-particiones-kafka.md)). Captura: `docs/evidencias/semana2/04_particiones.png`.
 - **Data Lake:** `raw` 2161, `rejected` 0, `processed` 2161, `curated/kpis` 126 y `curated/alertas` 149 (K3 71, A1 63, A2 15). Capturas: `05_datalake.png` y `06_alertas.png`.
 - **Pruebas:** 188 pruebas pasan (`01_pytest.png`) y el CI está en verde en GitHub Actions (`02_github_actions.png`).
+- **Nota:** cifra de ese momento. Cifra final en la versión v1.0.0: 151 pruebas (CI en verde sobre main).
 
 ## Plan Semana 3
 - DAG de Airflow con `validar_fuentes`, `controlar_calidad`, `agregar_kpis`, `generar_reporte` y `evaluar_alertas`.
