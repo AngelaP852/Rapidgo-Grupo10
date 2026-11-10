@@ -9,7 +9,7 @@
 
 ## 2. Valor o evidencia real observada en la ejecución
 
-- **Pruebas locales exitosas:** Se ejecutó el conjunto completo de pruebas automatizadas mediante `pytest -v`, obteniendo **151 pruebas superadas**, lo que da estabilidad al código antes de integrarlo a la rama principal.
+- **Pruebas locales exitosas:** Se ejecutó el conjunto completo de pruebas automatizadas mediante `pytest -v`, obteniendo **151 pruebas superadas**, lo que da estabilidad al código antes de integrarlo a la rama principal, Cifra final en la versión v1.0.0: **151 pruebas** (CI en verde sobre main).
 - **Ejecución completa del DAG:** el 8 de noviembre de 2026 las 5 tareas terminaron en verde y el reporte validó 2161 eventos. Capturas: `docs/evidencias/semana3/03_airflow_ui.png`, `04_dag_graph_exitoso.png` y `05_log_reporte.png`.
 - **XCom en uso real:** `validar_raw` publica el conteo de eventos (`conteo_eventos`) y `agregar` publica los KPIs por zona; `validar_curated` y `reporte` los leen para validar y para armar el reporte. Capturas: `07_xcom_validar_raw.png` y `08_xcom_usado_reporte.png`.
 - **Dónde verlo en la UI:** el XCom se ve entrando a la tarea y abriendo la pestaña **XCom**, o en el menú **Admin → XComs**. Los reintentos se ven en **Grid** (la tarea pasa a `up_for_retry`) y en **Logs**, donde se elige el intento.
