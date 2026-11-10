@@ -1,7 +1,7 @@
 # ADR-003: Estrategia de Orquestación y Recuperación ante Fallos en Pipeline Batch
 
 * **Estatus:** Aceptado
-* **Fecha:** 2026-11-05 (actualizado el 2026-11-08)
+* **Fecha:** 2026-11-05
 * **Autores:** Equipo 10 (Ana Karina Arenales, Angela María Palacios, Daniela Gómez)
 * **Contexto:** Variante 1 - SLA de Entregas (RapidGo 360)
 
@@ -45,6 +45,6 @@ Se configuran en los `default_args` de Airflow las siguientes políticas de resi
 
 ## Estado de Validación
 
-Validado mediante la suite de pruebas unitarias (pytest: 113 al cierre de la Semana 3 y 151 en la versión final) y la ejecución del pipeline de Integración Continua en GitHub Actions.
+Validado mediante la suite de 151 pruebas unitarias locales (`pytest`) y la ejecución del pipeline de Integración Continua en GitHub Actions.
 
 La recuperación ante fallos se comprobó en Airflow el 8 de noviembre de 2026: con la Variable `rapidgo_forzar_fallo` en `1`, el primer intento de `check_fuentes` falló, la tarea pasó a `up_for_retry` y el segundo intento, un minuto después, terminó bien junto con el resto del DAG. Capturas en `docs/evidencias/semana3/` (`06a_retry_intento1_error.png`, `06b_retry_intento2_ok.png`, `06c_retry_up_for_retry.png`).
