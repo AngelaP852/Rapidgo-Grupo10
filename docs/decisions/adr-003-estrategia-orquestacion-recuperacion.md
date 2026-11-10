@@ -1,7 +1,7 @@
 # ADR-003: Estrategia de Orquestación y Recuperación ante Fallos en Pipeline Batch
 
 * **Estatus:** Aceptado
-* **Fecha:** 2026-11-05
+* **Fecha:** 2026-11-05 (actualizado el 2026-11-08)
 * **Autores:** Equipo 10 (Ana Karina Arenales, Angela María Palacios, Daniela Gómez)
 * **Contexto:** Variante 1 - SLA de Entregas (RapidGo 360)
 
@@ -15,7 +15,7 @@ En la Semana 3 del proyecto RapidGo 360, se requiere orquestar el procesamiento 
    - *Contras:* Los datos corruptos ingresarían a la capa Curated, distorsionando las métricas de SLA y generando alertas falsas. Ante cualquier error imprevisto, el pipeline colapsaría sin reintentar.
 
 2. **Opción 2: Orquestación modular con Apache Airflow, validaciones estrictas y reintentos configurados (`retries`).**
-   - *Pros:* Permite modularizar la ejecución en 5 tareas secuenciales, aislar fallos mediante validaciones con excepciones (`validar_raw` y `validar_curated`), transferir estado seguro vía `XCom` y permitir la recuperación automática mediante la política de reintentos en cada tarea.
+   - *Pros:* Permite modularizar la ejecución en 5 tareas secuenciales, aislar fallos mediante validaciones con excepciones (`validar_raw` y `validar_curated`), transferir estado vía `XCom` y permitir la recuperación automática mediante la política de reintentos en cada tarea.
    - *Contras:* Requiere una configuración más rigurosa de dependencias y pruebas unitarias integradas en CI/CD.
 
 ## Decisión Tomada
@@ -26,8 +26,8 @@ Se implementa el DAG `rapidgo_sla_pipeline_semana3` en Apache Airflow estructura
 Se configuran en los `default_args` de Airflow las siguientes políticas de resiliencia:
 - `retries: 2`: Permite reintentar automáticamente la tarea ante fallos transitorios de red o sistema.
 - `retry_delay: timedelta(minutes=1)`: Otorga un margen de tiempo razonable antes del reintento.
-- Uso de **`XCom`** para garantizar la inmutabilidad y trazabilidad de los datos intercambiados entre tareas: `validar_raw` publica `conteo_eventos` y `agregar` publica los KPIs por zona, que leen `validar_curated` y `reporte`.
-- Captura de **excepciones explícitas (`ValueError`)** en las tareas de validación para interrumpir la secuencia de forma controlada si los contratos de la Variante 1 no se cumplen.
+- * Uso de `XCom` para intercambiar datos entre tareas, con trazabilidad en la base de metadatos de Airflow: `validar_raw` publica `conteo_eventos` y `agregar` publica los KPIs por zona, que leen `validar_curated` y `reporte`.
+- Excepciones explícitas (ValueError) lanzadas por las tareas de validación para interrumpir la secuencia de forma controlada si los contratos de la Variante 1 no se cumplen.
 
 ## Consecuencias
 - **Positivas:**
@@ -36,8 +36,9 @@ Se configuran en los `default_args` de Airflow las siguientes políticas de resi
   - Trazabilidad total de ejecuciones en los logs de Airflow y en las pruebas de CI (`pytest`).
 - **Negativas / Mitigaciones:**
   - Requiere mantener sincronizados los contratos de datos de la Variante 1 entre el entorno local, Airflow y GitHub Actions.
+  - El DAG calcula los KPIs en memoria y los transfiere por `XCom`; el Data Lake se monta en modo solo lectura en Airflow, por lo que el DAG no escribe la capa Curated. Además, cada corrida lee todo `processed/` y K3 usa la hora actual, así que el resultado depende del momento de ejecución. Queda como trabajo futuro hacer el DAG idempotente por intervalo y persistir los KPIs.
 
 ## Estado de Validación
-Validado mediante la suite de 113 pruebas unitarias locales (`pytest`) y la ejecución del pipeline de Integración Continua en GitHub Actions.
+Validado mediante la suite de pruebas unitarias (pytest): 113 al cierre de la Semana 3 y 151 en la versión final y la ejecución del pipeline de Integración Continua en GitHub Actions.
 
 La recuperación ante fallos se comprobó en Airflow el 8 de noviembre de 2026: con la Variable `rapidgo_forzar_fallo` en `1`, el primer intento de `check_fuentes` falló, la tarea pasó a `up_for_retry` y el segundo intento, un minuto después, terminó bien junto con el resto del DAG. Capturas en `docs/evidencias/semana3/` (`06a_retry_intento1_error.png`, `06b_retry_intento2_ok.png`, `06c_retry_up_for_retry.png`).
