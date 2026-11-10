@@ -28,16 +28,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install ruff
+          python -m pip install ruff pytest-cov
 
       - name: Linter
-        run: ruff check --select E,F --ignore E501 tests producer
+        run: ruff check --select E,F --ignore E501 tests producer rapidgo
 
       - name: Revisar sintaxis
-        run: python -m compileall -q spark tests producer
+        run: python -m compileall -q spark tests producer rapidgo airflow
 
       - name: Pruebas
-        run: python -m pytest -v 
+        run: python -m pytest -v --cov=producer --cov=rapidgo --cov=airflow/utils --cov-fail-under=60
 
       - name: Validar docker-compose
         run: docker compose config --quiet
