@@ -150,4 +150,10 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 | **Angela María Palacios Alonso** | Repositorio y estructura; Docker Compose con Kafka; topic, key y particiones (ADR-001, ADR-002); producer y verificación de particiones; evidencias de la Semana 2.               | #8, #29, #31, #33, #41, #43         | #19 (ADR-001), #20 (compose Kafka), #25 (checkpoint 1), #80 (producer y particiones), #81 (check_partitions), #99 (evidencias), #100 (ADR-002) |
 | **Ana Karina Arenales Bautista**  | Contrato JSON y ejemplos; KPIs y alertas; README inicial; job de Spark Streaming (validación, transformaciones, KPIs, alertas con estado); DAG de Airflow y funciones de calidad. | #1, #2, #3, #32, #34, #36, #38, #39 | #4 (README), #5 (contrato), #62 (alertas estado), #92 (job de Spark); en revisión: #85, #86, #87, #90                                         |
 
+## Limitaciones conocidas
+
+- El DAG de Airflow calcula los KPIs en memoria y los transfiere por XCom; el Data Lake se monta en solo lectura, por lo que no se escribe la capa Curated desde el DAG.
+- Cada corrida del DAG lee todo `processed/` y el KPI K3 usa la hora actual, por lo que el resultado depende del momento de ejecución.
+- El linter del CI cubre `tests/`, `producer/` y `rapidgo/`; `spark/` y `airflow/` tienen avisos pendientes de corregir.
+- Cobertura de pruebas: aproximadamente 63 % en el código Python probable sin Spark (el job de Spark no tiene pruebas automatizadas).
 Se actualizará cada semana. Enlace al video final: pendiente (Semana 4).
