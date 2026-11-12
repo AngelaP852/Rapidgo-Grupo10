@@ -5,8 +5,8 @@ Ejecución de `workflow_dispatch` del workflow **CI** (quality gate completo) la
 | Dato | Valor |
 |---|---|
 | Quién la lanzó | annkey03 (Ana Karina Arenales Bautista) |
-| Fecha y hora | 11 de Noviembre del 2026, 11:30am |
-| Rama / commit | `main` · <<SHA corto del commit, está junto al nombre del run>> |
+| Fecha y hora | 11 de Noviembre del 2026, 11:45am |
+| Rama / commit | `main` · 81f27f2 |
 | Resultado | success |
 | Enlace al run | https://github.com/AngelaP852/Rapidgo-Grupo10/actions/runs/43262117024 |
 
