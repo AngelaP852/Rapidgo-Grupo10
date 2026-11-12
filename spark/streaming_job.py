@@ -1,9 +1,8 @@
-import os
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col, to_timestamp, when, unix_timestamp, window, avg, sum, count, round
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType
 import pandas as pd
-from datetime import timedelta, datetime,timezone 
+from datetime import timedelta
 
 # 1. Definir el esquema según contrato_evento.md
 schema = StructType([
@@ -141,7 +140,7 @@ def main():
         .dropDuplicates(["event_id"])
 
     # 5. Escribir en 'processed' los datos transformados
-    query_processed = dedup_df.writeStream \
+    dedup_df.writeStream \
         .outputMode("append") \
         .format("parquet") \
         .option("path", "/opt/spark/datalake/processed/eventos") \
@@ -160,12 +159,12 @@ def main():
         .agg(
             round(avg("delay_minutes"), 2).alias("K1_tiempo_promedio_entrega"),
             round(
-                (sum(when(col("is_out_of_sla") == True, 1).otherwise(0)) / count("*")) * 100, 
+                (sum(when(col("is_out_of_sla"), 1).otherwise(0)) / count("*")) * 100, 
                 2
             ).alias("K2_porcentaje_fuera_sla")
         )
 
-    query_curated = kpis_df.writeStream \
+    kpis_df.writeStream \
         .outputMode("append") \
         .format("parquet") \
         .option("path", "/opt/spark/datalake/curated/kpis") \
@@ -173,7 +172,7 @@ def main():
         .start()
 
     # 6. Escribir inválidos
-    query_raw = invalid_df.writeStream \
+    invalid_df.writeStream \
         .outputMode("append") \
         .format("parquet") \
         .option("path", "/opt/spark/datalake/raw/invalidos") \
@@ -194,7 +193,7 @@ def main():
         )
 
     # Escribir alertas en 'curated/alertas'
-    query_alerts = alerts_df.writeStream \
+    alerts_df.writeStream \
         .outputMode("append") \
         .format("parquet") \
         .option("path", "/opt/spark/datalake/curated/alertas") \
