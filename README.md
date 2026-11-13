@@ -9,8 +9,9 @@ Docente: Ing. Oscar Jobany Gomez Ochoa
 | **Equipo**          | Grupo 10                                                                             |
 | **Integrantes**     | Daniela Gomez Castro · Angela Maria Palacios Alonso · Ana Karina Arenales Bautista |
 | **Variante**        | 1 — SLA de entregas                                                                 |
-| **Versión actual** | v0.3.0-orchestration                                                                 |
+| **Versión actual** | v1.0.0                                                                               |
 | **Tablero Kanban**  | https://github.com/users/AngelaP852/projects/4/views/1                               |
+| **Link Video Final**     | [canva.link/wpag7fkcjct4x15](https://canva.link/wpag7fkcjct4x15)                      |
 
 ## Problema de negocio
 
@@ -57,7 +58,7 @@ Estados: `CREADO → ASIGNADO → RECOGIDO → EN_RUTA → ENTREGADO`, más `DET
 | ------------------------ | ------------ | ----------- | ------------ | ---------- |
 | `rapidgo.sla.entregas` | `order_id` | 3           | 1            | 7 días    |
 
-Valores propuestos; la justificación y la decisión están en el [ADR-001](docs/decisions/ADR-001-key-y-particiones-kafka.md). La distribución real por partición se medirá en la Semana 2.
+Valores propuestos; la justificación y la decisión están en el [ADR-001](docs/decisions/ADR-001-key-y-particiones-kafka.md). La distribución real se midió con 2161 mensajes: 36.7 %, 31.9 % y 31.3 % por partición, sin pedidos repartidos en dos particiones (ver ADR-001).
 
 ## Indicadores y alertas (umbrales iniciales)
 
@@ -74,13 +75,13 @@ Detalle completo en [`docs/kpis_y_alertas.md`](docs/kpis_y_alertas.md).
 | A1 SLA_EXCEDIDO     | pedido sin `ENTREGADO`/`CANCELADO` y `ahora > promised_at + 5 min`   |
 | A2 ENTREGA_DETENIDA | pedido en `EN_RUTA` o `DETENIDO` sin eventos nuevos por más de 10 min |
 
-El SLA se calcula como `promised_at = created_at + 10 min + 8 min × distance_km`, redondeado al múltiplo de 5 min más cercano. Los umbrales son hipótesis iniciales y se revisarán en la Semana 2 con datos reales.
+El SLA se calcula como `promised_at = created_at + 10 min + 8 min × distance_km`, redondeado al múltiplo de 5 min más cercano. Los umbrales se validaron con los casos de prueba de las alertas ([`docs/casos_prueba_alertas.md`](docs/casos_prueba_alertas.md)).
 
 ## Ejecución local
 
-Requisitos: Docker Desktop abierto y Python 3.11 con `python -m pip install -r requirements.txt`. Los comandos son de PowerShell, desde la raíz del repo.
+Requisitos: Docker Desktop abierto y Python 3.11 con `python -m pip install -r requirements.txt`. Los comandos son de PowerShell, desde la raíz del repositorio.
 
-**1. Levantar Kafka y Spark**
+**1. Levantar Kafka, Spark y Airflow**
 
 ```
 docker compose up -d
@@ -113,7 +114,18 @@ Resultado esperado: 6 filas, con `A1_SLA_EXCEDIDO` y `A2_ENTREGA_DETENIDA` para 
 
 Los KPIs quedan en `datalake/curated/kpis` y los eventos inválidos en `datalake/raw/invalidos`.
 
-**4. Apagar y limpiar**
+**4. Ejecutar el DAG de Airflow**
+
+Airflow ya está corriendo desde el paso 1 y tarda 2 o 3 minutos en instalar `pandas` y `pyarrow`. Mientras tanto el DAG puede mostrar *Import Error*; se arregla solo al terminar.
+
+1. Abrir http://localhost:8080 (usuario `admin`, contraseña `admin`).
+2. Activar el DAG `rapidgo_sla_pipeline_semana3` (interruptor a la izquierda; nace pausado).
+3. Dispararlo con el botón ▶ (*Trigger DAG*).
+4. Verificar que las 5 tareas queden en verde: `check_fuentes → validar_raw → agregar → validar_curated → reporte`. Los KPIs están en el log de `reporte`.
+
+Para probar el fallo controlado: crear la Variable `rapidgo_forzar_fallo` = `1` (Admin → Variables) y volver a disparar. La tarea reintenta y se recupera en el segundo intento. Para una corrida normal, ponerla en `0` o borrarla.
+
+**5. Apagar y limpiar**
 
 ```
 docker compose down
@@ -154,6 +166,4 @@ Issue → Branch → Pull Request → CI → Review → Merge → Release. No se
 
 - El DAG de Airflow calcula los KPIs en memoria y los transfiere por XCom; el Data Lake se monta en solo lectura, por lo que no se escribe la capa Curated desde el DAG.
 - Cada corrida del DAG lee todo `processed/` y el KPI K3 usa la hora actual, por lo que el resultado depende del momento de ejecución.
-- El linter del CI cubre `tests/`, `producer/` y `rapidgo/`; `spark/` y `airflow/` tienen avisos pendientes de corregir.
 - Cobertura de pruebas: aproximadamente 63 % en el código Python probable sin Spark (el job de Spark no tiene pruebas automatizadas).
-Se actualizará cada semana. Enlace al video final: pendiente (Semana 4).
