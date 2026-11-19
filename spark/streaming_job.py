@@ -3,7 +3,7 @@ from pyspark.sql.functions import from_json, col, to_timestamp, when, unix_times
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType
 import pandas as pd
 from datetime import timedelta
-
+import calendar
 # 1. Definir el esquema según contrato_evento.md
 schema = StructType([
     StructField("event_id", StringType(), True),
@@ -18,74 +18,89 @@ schema = StructType([
 ])
 
 # --- TAREA 6: Función de estado para alertas ---
+TOLERANCIA_A1 = timedelta(minutes=5)
+SILENCIO_A2 = timedelta(minutes=10)
+ESTADOS_CERRADOS = ["ENTREGADO", "CANCELADO"]
+ESTADOS_EN_MOVIMIENTO = ["EN_RUTA", "DETENIDO"]
+
+
+def _a_ms(dt):
+    """datetime (UTC, sin zona) -> milisegundos desde 1970."""
+    return calendar.timegm(dt.timetuple()) * 1000 + dt.microsecond // 1000
+
+
 def update_state_and_check_alerts(key, pdf_iter, state):
-    # key es una tupla (order_id,)
     order_id = key[0]
-    
-    # Convertimos el iterador de Pandas a una lista para procesarlo
-    pdf = list(pdf_iter)
-    if not pdf:
-        return iter([])
-    
-    # Tomamos el DataFrame combinado
-    df = pd.concat(pdf)
-    
-    # Ordenamos por event_ts para asegurar el orden
-    df = df.sort_values(by="event_ts")
-    last_event = df.iloc[-1]
-    
-    # Actualizamos o inicializamos el estado
-    if not state.exists:
-        # Primer evento que vemos de este pedido
-        new_state = {
-            "last_status": last_event["status"],
-            "last_event_ts": last_event["event_ts"],
-            "promised_at": last_event["promised_at"],
-            "zone": last_event["zone"]
-        }
-        state.update(new_state)
+
+    if state.hasTimedOut:
+        # El watermark pasó un plazo y no llegaron eventos nuevos del pedido.
+        last_status, last_event_ts, promised_at, zone, a1_sent, a2_sent = state.get
+        ahora = pd.Timestamp(state.getCurrentWatermarkMs(), unit="ms").to_pydatetime()
     else:
-        # Actualizamos con el evento más reciente
-        state.update({
-            "last_status": last_event["status"],
-            "last_event_ts": last_event["event_ts"],
-            "promised_at": last_event["promised_at"],
-            "zone": last_event["zone"]
-        })
-    
-    current_state = state.get
+        pdfs = list(pdf_iter)
+        if not pdfs:
+            return iter([])
+        last_event = pd.concat(pdfs).sort_values(by="event_ts").iloc[-1]
+        a1_sent = a2_sent = False
+        if state.exists:
+            old_status, old_ts, old_prom, old_zone, a1_sent, a2_sent = state.get
+            if old_ts > last_event["event_ts"].to_pydatetime():
+                last_event = pd.Series({
+                    "status": old_status,
+                    "event_ts": pd.Timestamp(old_ts),
+                    "promised_at": pd.Timestamp(old_prom),
+                    "zone": old_zone,
+                })
+        last_status = last_event["status"]
+        last_event_ts = last_event["event_ts"].to_pydatetime()
+        promised_at = last_event["promised_at"].to_pydatetime()
+        zone = last_event["zone"]
+        ahora = last_event_ts  # el propio evento ya ocurrió
+
+    # Pedido cerrado: no hay alertas y se libera el estado
+    if last_status in ESTADOS_CERRADOS:
+        state.remove()
+        return iter([])
+
     alerts = []
-    
-    # Solo evaluamos si el pedido NO está cerrado
-    if current_state["last_status"] not in ["ENTREGADO", "CANCELADO"]:
-        
-        # --- ALERTA A1: SLA_EXCEDIDO ---
-        # Si el último event_ts supera promised_at + 5 min
-        sla_limit = current_state["promised_at"] + timedelta(minutes=5)
-        if current_state["last_event_ts"] > sla_limit:
-            alerts.append({
-                "order_id": order_id,
-                "alerta": "A1_SLA_EXCEDIDO",
-                "event_ts": current_state["last_event_ts"],
-                "zone": current_state["zone"]
-            })
-        
-        # --- ALERTA A2: ENTREGA_DETENIDA ---
-        # Si el pedido está EN_RUTA o DETENIDO
-        if current_state["last_status"] in ["EN_RUTA", "DETENIDO"]:
-            alerts.append({
-                "order_id": order_id,
-                "alerta": "A2_ENTREGA_DETENIDA",
-                "event_ts": current_state["last_event_ts"],
-                "zone": current_state["zone"]
-            })
-            
-    return iter([pd.DataFrame(alerts)])
+    # --- ALERTA A1: SLA_EXCEDIDO ---
+    if not a1_sent and ahora > promised_at + TOLERANCIA_A1:
+        alerts.append("A1_SLA_EXCEDIDO")
+        a1_sent = True
+    # --- ALERTA A2: ENTREGA_DETENIDA (más de 10 min sin eventos) ---
+    if (not a2_sent and last_status in ESTADOS_EN_MOVIMIENTO
+            and ahora - last_event_ts > SILENCIO_A2):
+        alerts.append("A2_ENTREGA_DETENIDA")
+        a2_sent = True
+
+    # Próximo plazo en el que hay que volver a mirar este pedido
+    plazos = []
+    if not a1_sent:
+        plazos.append(promised_at + TOLERANCIA_A1)
+    if not a2_sent and last_status in ESTADOS_EN_MOVIMIENTO:
+        plazos.append(last_event_ts + SILENCIO_A2)
+
+    if plazos:
+        state.update((last_status, last_event_ts, promised_at, zone, a1_sent, a2_sent))
+        state.setTimeoutTimestamp(_a_ms(min(plazos)))
+    else:
+        state.remove()
+
+    if not alerts:
+        return iter([])
+    return iter([pd.DataFrame([
+        {"order_id": order_id, "alerta": a, "event_ts": last_event_ts, "zone": zone}
+        for a in alerts
+    ])])
+
+
 
 def main():
     # Inicialización de la sesión de Spark para Streaming
     spark = SparkSession.builder \
         .appName("RapidgoSLAStreaming") \
+        .config("spark.sql.session.timeZone", "UTC") \
+        .config("spark.sql.shuffle.partitions", "3") \
         .getOrCreate()
         
     spark.sparkContext.setLogLevel("WARN")
@@ -151,7 +166,6 @@ def main():
     entregados_df = dedup_df.filter(col("status") == "ENTREGADO")
     
     kpis_df = entregados_df \
-        .withWatermark("event_ts", "10 minutes") \
         .groupBy(
             window(col("event_ts"), "5 minutes"),
             col("zone")
@@ -187,9 +201,9 @@ def main():
         .applyInPandasWithState(
             update_state_and_check_alerts,
             outputStructType="order_id string, alerta string, event_ts timestamp, zone string",
-            stateStructType="last_status string, last_event_ts timestamp, promised_at timestamp, zone string",
+            stateStructType="last_status string, last_event_ts timestamp, promised_at timestamp, zone string, a1_sent boolean, a2_sent boolean",
             outputMode="append",
-            timeoutConf=GroupStateTimeout.NoTimeout 
+            timeoutConf=GroupStateTimeout.EventTimeTimeout
         )
 
     # Escribir alertas en 'curated/alertas'
